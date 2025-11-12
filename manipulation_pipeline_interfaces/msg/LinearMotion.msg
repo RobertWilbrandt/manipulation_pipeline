@@ -2,7 +2,7 @@
 
 uint8 MOTION_LINEAR_Z = 1
 uint8 MOTION_CARTESIAN_PATH = 2
-uint8 motion
+uint8 motion 1
 
 # Distance to travel if motion==MOTION_LINEAR_Z
 # If left empty, a default distance of 0.1 is assumed
