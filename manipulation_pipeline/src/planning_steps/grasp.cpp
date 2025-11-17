@@ -106,7 +106,7 @@ Grasp::plan(const RobotModel& robot_model,
   std::vector<geometry_msgs::msg::Pose> approach_waypoints;
   std::vector<Eigen::Isometry3d> approach_waypoints_local;
   approach_waypoints_local.reserve(approach_waypoints.size());
-  if(m_goal->approach.motion == 2)
+  if (m_goal->approach.motion == 2)
   {
     approach_waypoints = m_goal->approach.waypoints;
 
@@ -204,7 +204,7 @@ Grasp::plan(const RobotModel& robot_model,
           // and then use planCartesianSequence converting them in the right format
           // and give the required inputs
           robot_trajectory::RobotTrajectoryPtr cartesian_approach_trajectory;
-          if(m_goal->approach.motion == 1)
+          if (m_goal->approach.motion == 1)
           {
             cartesian_approach_trajectory = planner.planCartesian(
               *state, approach_pose, tip_link, cartesian_planning_scene, &approach_limits);
@@ -212,12 +212,18 @@ Grasp::plan(const RobotModel& robot_model,
             {
               return false;
             }
-          } else
+          }
+          else
           {
             std::reverse(approach_waypoints.begin(), approach_waypoints.end());
 
-            cartesian_approach_trajectory = planner.planCartesianSequence(
-              *state, state->getRobotModel()->getModelFrame(), approach_waypoints, tip_link, cartesian_planning_scene, &approach_limits);
+            cartesian_approach_trajectory =
+              planner.planCartesianSequence(*state,
+                                            state->getRobotModel()->getModelFrame(),
+                                            approach_waypoints,
+                                            tip_link,
+                                            cartesian_planning_scene,
+                                            &approach_limits);
             if (!cartesian_approach_trajectory || cartesian_approach_trajectory->empty())
             {
               return false;
