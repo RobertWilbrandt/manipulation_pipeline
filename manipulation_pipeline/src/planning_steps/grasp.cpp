@@ -101,6 +101,41 @@ Grasp::plan(const RobotModel& robot_model,
   approach_pose.translation() +=
     target_pose.rotation() * (-approach_dist * Eigen::Vector3d::UnitZ());
 
+  // If the cartesian motion is required the planning will start from the target
+  // pose to the first approach waypoint
+  std::vector<geometry_msgs::msg::Pose> approach_waypoints;
+  std::vector<Eigen::Isometry3d> approach_waypoints_local;
+  approach_waypoints_local.reserve(approach_waypoints.size());
+  if(m_goal->approach.motion == 2)
+  {
+    approach_waypoints = m_goal->approach.waypoints;
+
+    // Convert to Isometry3d: loop over vector
+    // and save into the local one
+    for (const auto& pose : approach_waypoints)
+    {
+      Eigen::Isometry3d iso;
+      tf2::convert(pose, iso);
+
+      // Waypoints should be relative to the target pose
+      // so they have to be converted (assumption)
+      approach_waypoints_local.push_back(target_pose_frame_transform * iso);
+    }
+    approach_waypoints_local.push_back(target_pose);
+
+    approach_waypoints.clear();
+
+    // Convert to Pose: loop over vector
+    // and save into the original one
+    for (const auto& iso : approach_waypoints_local)
+    {
+      geometry_msgs::msg::Pose pose;
+      tf2::convert(iso, pose);
+
+      approach_waypoints.push_back(pose);
+    }
+  }
+
   const double retract_dist      = m_goal->retract.distance == 0.0 ? 0.1 : m_goal->retract.distance;
   Eigen::Isometry3d retract_pose = target_pose;
   retract_pose.translation() += target_pose.rotation() * (-retract_dist * Eigen::Vector3d::UnitZ());
@@ -163,11 +198,30 @@ Grasp::plan(const RobotModel& robot_model,
           }
 
           RCLCPP_DEBUG(m_log, "Planning cartesian approach trajectory");
-          auto cartesian_approach_trajectory = planner.planCartesian(
-            *state, approach_pose, tip_link, cartesian_planning_scene, &approach_limits);
-          if (!cartesian_approach_trajectory || cartesian_approach_trajectory->empty())
+
+          // VDP: Start from the end of the poses since it gets reversed
+          // m_goal->approach.waypoints (poses array that you can just reverse)
+          // and then use planCartesianSequence converting them in the right format
+          // and give the required inputs
+          robot_trajectory::RobotTrajectoryPtr cartesian_approach_trajectory;
+          if(m_goal->approach.motion == 1)
           {
-            return false;
+            cartesian_approach_trajectory = planner.planCartesian(
+              *state, approach_pose, tip_link, cartesian_planning_scene, &approach_limits);
+            if (!cartesian_approach_trajectory || cartesian_approach_trajectory->empty())
+            {
+              return false;
+            }
+          } else
+          {
+            std::reverse(approach_waypoints.begin(), approach_waypoints.end());
+
+            cartesian_approach_trajectory = planner.planCartesianSequence(
+              *state, state->getRobotModel()->getModelFrame(), approach_waypoints, tip_link, cartesian_planning_scene, &approach_limits);
+            if (!cartesian_approach_trajectory || cartesian_approach_trajectory->empty())
+            {
+              return false;
+            }
           }
           cartesian_approach_trajectory->reverse();
 
@@ -183,6 +237,8 @@ Grasp::plan(const RobotModel& robot_model,
           RCLCPP_DEBUG(m_log, "Planning cartesian retract trajectory");
           // TODO: Why does this not work with attached_planning_scene instead of
           // context.planning_scene?
+
+          // TODO: Same here
           auto cartesian_retract_trajectory = planner.planCartesian(
             *state, retract_pose, tip_link, cartesian_planning_scene, &retract_limits);
           // planner.planCartesian(*state, retract_pose, tip_link, attached_planning_scene);
