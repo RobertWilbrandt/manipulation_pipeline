@@ -119,7 +119,7 @@ Grasp::plan(const RobotModel& robot_model,
 
       // Waypoints should be relative to the target pose
       // so they have to be converted (assumption)
-      approach_waypoints_local.push_back(target_pose_frame_transform * iso);
+      approach_waypoints_local.push_back(target_pose_local * iso);
     }
     approach_waypoints_local.push_back(target_pose);
 
