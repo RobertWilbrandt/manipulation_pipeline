@@ -281,7 +281,7 @@ Grasp::plan(const RobotModel& robot_model,
           robot_trajectory::RobotTrajectoryPtr cartesian_retract_trajectory;
           if (m_goal->retract.motion == 1)
           {
-            auto cartesian_retract_trajectory = planner.planCartesian(
+            cartesian_retract_trajectory = planner.planCartesian(
               *state, retract_pose, tip_link, cartesian_planning_scene, &retract_limits);
             // planner.planCartesian(*state, retract_pose, tip_link, attached_planning_scene);
             if (!cartesian_retract_trajectory || cartesian_retract_trajectory->empty())
@@ -291,8 +291,6 @@ Grasp::plan(const RobotModel& robot_model,
           }
           else
           {
-            std::reverse(retract_waypoints.begin(), retract_waypoints.end());
-
             cartesian_retract_trajectory =
               planner.planCartesianSequence(*state,
                                             state->getRobotModel()->getModelFrame(),
@@ -305,7 +303,6 @@ Grasp::plan(const RobotModel& robot_model,
               return false;
             }
           }
-          cartesian_retract_trajectory->reverse();
 
           // Plan ptp motion with original scene (without attached object)
           RCLCPP_DEBUG(m_log, "Planning PTP approach");
