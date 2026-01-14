@@ -103,22 +103,90 @@ Place::plan(const RobotModel& robot_model,
   robot_trajectory::RobotTrajectoryPtr result_retract_trajectory;
   std::shared_ptr<manipulation_pipeline::Action> tool_action;
 
-  // Get approach and retract frames based on target frame
-  const double approach_dist = m_goal->approach.distance == 0.0 ? 0.1 : m_goal->approach.distance;
-  Eigen::Isometry3d approach_pose = target_pose;
-  approach_pose.translation() +=
-    object_target_pose.rotation() * (-approach_dist * Eigen::Vector3d::UnitZ());
+  // For path visualization
+  std::vector<Eigen::Isometry3d> path_poses;
 
-  const double retract_dist      = m_goal->retract.distance == 0.0 ? 0.1 : m_goal->retract.distance;
-  Eigen::Isometry3d retract_pose = target_pose;
-  retract_pose.translation() += target_pose.rotation() * (-retract_dist * Eigen::Vector3d::UnitZ());
+  Eigen::Isometry3d approach_pose;
+  std::vector<geometry_msgs::msg::Pose> approach_waypoints;
+
+  if (m_goal->approach.motion == 1)
+  {
+    // Get approach and retract frames based on target frame
+    const double approach_dist = m_goal->approach.distance == 0.0 ? 0.1 : m_goal->approach.distance;
+    approach_pose              = target_pose;
+
+    approach_pose.translation() +=
+      target_pose.rotation() * (-approach_dist * Eigen::Vector3d::UnitZ());
+
+    // Add poses to visualized path
+    path_poses.insert(path_poses.end(), {approach_pose, target_pose});
+  }
+  else if (m_goal->approach.motion == 2)
+  {
+    approach_waypoints = convertWaypoints(m_goal->approach.waypoints, object_target_pose_local);
+
+    geometry_msgs::msg::Pose target_pose_msg;
+    tf2::convert(target_pose, target_pose_msg);
+
+    // If the cartesian motion is required the planning will start from the target
+    // pose to the first approach waypoint
+    approach_waypoints.push_back(target_pose_msg);
+
+    // Convert them all into Isometry3d for visualization
+    for (const auto& pose : approach_waypoints)
+    {
+      Eigen::Isometry3d iso;
+
+      tf2::convert(pose, iso);
+      path_poses.push_back(iso);
+    }
+  }
+  else
+  {
+    throw std::runtime_error{
+      fmt::format("Invalid approach motion option for '{}: only 1 or 2 are possible.'",
+                  m_goal->approach.motion)};
+  }
+
+  std::vector<geometry_msgs::msg::Pose> retract_waypoints;
+  Eigen::Isometry3d retract_pose;
+
+  if (m_goal->retract.motion == 1)
+  {
+    const double retract_dist = m_goal->retract.distance == 0.0 ? 0.1 : m_goal->retract.distance;
+    retract_pose              = target_pose;
+    retract_pose.translation() +=
+      target_pose.rotation() * (-retract_dist * Eigen::Vector3d::UnitZ());
+
+    // Add pose to visualized path
+    path_poses.push_back(retract_pose);
+  }
+  else if (m_goal->retract.motion == 2)
+  {
+    // If the cartesian motion is required the planning will start from the target
+    // pose (already there) to the final retract waypoint
+    retract_waypoints = convertWaypoints(m_goal->retract.waypoints, object_target_pose_local);
+
+    // Convert them all into Isometry3d for visualization
+    for (const auto& pose : retract_waypoints)
+    {
+      Eigen::Isometry3d iso;
+
+      tf2::convert(pose, iso);
+      path_poses.push_back(iso);
+    }
+  }
+  else
+  {
+    throw std::runtime_error{fmt::format(
+      "Invalid retract motion option for '{}: only 1 or 2 are possible.'", m_goal->retract.motion)};
+  }
 
   // Resolve cartesian limits
   const auto approach_limits = applyCartesianLimits(m_goal->approach.limits, limits);
   const auto retract_limits  = applyCartesianLimits(m_goal->retract.limits, limits);
 
   // Visualize path
-  std::vector path_poses{approach_pose, target_pose, retract_pose};
   context.plan_visualizer->addPath(path_poses, context.planning_scene->getPlanningFrame());
   context.plan_visualizer->publish();
 
@@ -149,11 +217,32 @@ Place::plan(const RobotModel& robot_model,
           }
 
           RCLCPP_DEBUG(m_log, "Planning cartesian approach trajectory");
-          auto cartesian_approach_trajectory = planner.planCartesian(
-            *state, approach_pose, tip_link, cartesian_planning_scene, &approach_limits);
-          if (!cartesian_approach_trajectory || cartesian_approach_trajectory->empty())
+
+          robot_trajectory::RobotTrajectoryPtr cartesian_approach_trajectory;
+          if (m_goal->approach.motion == 1)
           {
-            return false;
+            cartesian_approach_trajectory = planner.planCartesian(
+              *state, approach_pose, tip_link, cartesian_planning_scene, &approach_limits);
+            if (!cartesian_approach_trajectory || cartesian_approach_trajectory->empty())
+            {
+              return false;
+            }
+          }
+          else
+          {
+            std::reverse(approach_waypoints.begin(), approach_waypoints.end());
+
+            cartesian_approach_trajectory =
+              planner.planCartesianSequence(*state,
+                                            state->getRobotModel()->getModelFrame(),
+                                            approach_waypoints,
+                                            tip_link,
+                                            cartesian_planning_scene,
+                                            &approach_limits);
+            if (!cartesian_approach_trajectory || cartesian_approach_trajectory->empty())
+            {
+              return false;
+            }
           }
           cartesian_approach_trajectory->reverse();
 
@@ -167,11 +256,30 @@ Place::plan(const RobotModel& robot_model,
           detached_planning_scene->processAttachedCollisionObjectMsg(attached_collision_object);
 
           RCLCPP_DEBUG(m_log, "Planning cartesian retract trajectory");
-          auto cartesian_retract_trajectory = planner.planCartesian(
-            *state, retract_pose, tip_link, cartesian_planning_scene, &retract_limits);
-          if (!cartesian_retract_trajectory)
+          robot_trajectory::RobotTrajectoryPtr cartesian_retract_trajectory;
+          if (m_goal->retract.motion == 1)
           {
-            return false;
+            cartesian_retract_trajectory = planner.planCartesian(
+              *state, retract_pose, tip_link, cartesian_planning_scene, &retract_limits);
+            // planner.planCartesian(*state, retract_pose, tip_link, attached_planning_scene);
+            if (!cartesian_retract_trajectory || cartesian_retract_trajectory->empty())
+            {
+              return false;
+            }
+          }
+          else
+          {
+            cartesian_retract_trajectory =
+              planner.planCartesianSequence(*state,
+                                            state->getRobotModel()->getModelFrame(),
+                                            retract_waypoints,
+                                            tip_link,
+                                            cartesian_planning_scene,
+                                            &retract_limits);
+            if (!cartesian_retract_trajectory || cartesian_retract_trajectory->empty())
+            {
+              return false;
+            }
           }
 
           // Plan ptp motion with original scene (with attached object)
@@ -263,6 +371,31 @@ Place::getAttachedBody(const std::string& name,
   }
 
   return *find_it;
+}
+
+std::vector<geometry_msgs::msg::Pose>
+Place::convertWaypoints(const std::vector<geometry_msgs::msg::Pose>& waypoints,
+                        const Eigen::Isometry3d& transform) const
+{
+  std::vector<geometry_msgs::msg::Pose> converted_waypoints;
+
+  // Convert to Isometry3d: loop over vector
+  // and save into the local one
+  for (const auto& pose : waypoints)
+  {
+    Eigen::Isometry3d iso;
+    geometry_msgs::msg::Pose converted_pose;
+
+    tf2::convert(pose, iso);
+
+    // Waypoints should be relative to the target pose
+    // so they have to be converted (assumption)
+    tf2::convert(transform * iso, converted_pose);
+
+    converted_waypoints.push_back(converted_pose);
+  }
+
+  return converted_waypoints;
 }
 
 } // namespace manipulation_pipeline

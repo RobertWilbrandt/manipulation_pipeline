@@ -73,6 +73,10 @@ private:
 
   geometry_msgs::msg::PoseStamped
   resolveTargetPose(const moveit_msgs::msg::CollisionObject& object) const;
+
+  std::vector<geometry_msgs::msg::Pose>
+  convertWaypoints(const std::vector<geometry_msgs::msg::Pose>& waypoints,
+                   const Eigen::Isometry3d& transform) const;
 };
 
 } // namespace manipulation_pipeline

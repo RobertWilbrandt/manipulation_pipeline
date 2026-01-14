@@ -66,6 +66,10 @@ private:
   const moveit::core::AttachedBody*
   getAttachedBody(const std::string& name,
                   const planning_scene::PlanningScene& planning_scene) const;
+
+  std::vector<geometry_msgs::msg::Pose>
+  convertWaypoints(const std::vector<geometry_msgs::msg::Pose>& waypoints,
+                   const Eigen::Isometry3d& transform) const;
 };
 
 } // namespace manipulation_pipeline
