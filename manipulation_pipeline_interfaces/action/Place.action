@@ -25,6 +25,9 @@ string subframe
 # Pairs of links that should not get checked for collsions during approach and retract
 CollisionPair[] disabled_collisions
 
+# Constraints that need to be satisfied during the planned motion
+Constraints constraints
+
 # Motion for cartesian approach
 LinearMotion approach
 

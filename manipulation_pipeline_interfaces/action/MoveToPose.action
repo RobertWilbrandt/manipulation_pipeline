@@ -11,6 +11,9 @@ string tip
 # Pose to move to
 geometry_msgs/PoseStamped pose
 
+# Constraints that need to be satisfied during the planned motion
+Constraints constraints
+
 # Motion parameters to use during execution
 # If left unchanged, defaults from mapi configuration will be used.
 MotionParameters motion_parameters

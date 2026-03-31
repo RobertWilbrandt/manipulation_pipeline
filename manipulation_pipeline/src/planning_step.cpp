@@ -39,6 +39,8 @@
 #include "manipulation_pipeline/actions/execute_trajectory.h"
 #include "manipulation_pipeline/planner.h"
 
+#include <rclcpp/logging.hpp>
+
 namespace manipulation_pipeline {
 
 moveit_cpp::PlanningComponent::PlanRequestParameters applyMotionParameters(
@@ -159,6 +161,39 @@ PlanningStep::createToolAction(const GroupInterface& group_interface,
     default:
       throw std::runtime_error{fmt::format("Invalid tool command '{}'", cmd.command)};
   }
+}
+
+moveit_msgs::msg::Constraints PlanningStep::convertConstraints(
+  const manipulation_pipeline_interfaces::msg::Constraints& constraints,
+  const moveit::core::LinkModel* tip_link) const
+{
+  moveit_msgs::msg::Constraints result;
+
+  if (constraints.object_orientation_constraints.empty())
+  {
+    RCLCPP_INFO(m_log, "No constraints specified");
+  }
+  else
+  {
+    for (const auto& c : constraints.object_orientation_constraints)
+    {
+      moveit_msgs::msg::OrientationConstraint msg;
+      msg.header.frame_id = c.orientation.header.frame_id;
+      msg.orientation     = c.orientation.quaternion;
+      msg.link_name       = tip_link->getName();
+
+      msg.parameterization          = moveit_msgs::msg::OrientationConstraint::ROTATION_VECTOR;
+      msg.absolute_x_axis_tolerance = c.tolerance.x;
+      msg.absolute_y_axis_tolerance = c.tolerance.y;
+      msg.absolute_z_axis_tolerance = c.tolerance.z;
+
+      msg.weight = 1.0;
+
+      result.orientation_constraints.push_back(msg);
+    }
+  }
+
+  return result;
 }
 
 } // namespace manipulation_pipeline

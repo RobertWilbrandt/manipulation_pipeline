@@ -24,9 +24,11 @@ rosidl_generate_interfaces(
     srv/SplitObject.srv
     msg/CartesianLimits.msg
     msg/CollisionPair.msg
+    msg/Constraints.msg
     msg/LinearMotion.msg
     msg/MotionParameters.msg
     msg/ObjectComponent.msg
+    msg/ObjectOrientationConstraint.msg
     msg/Progress.msg
     msg/State.msg
     msg/ToolCommand.msg

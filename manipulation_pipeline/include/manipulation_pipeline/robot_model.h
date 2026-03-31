@@ -74,7 +74,7 @@ public:
 
   [[nodiscard]] const moveit::core::LinkModel* referenceLink() const;
   [[nodiscard]] const std::vector<const moveit::core::LinkModel*>& tipLinks() const;
-  [[nodiscard]] const moveit::core::LinkModel* resolveTip(const std::string& tip_link) const;
+  [[nodiscard]] const moveit::core::LinkModel* resolveTip(const std::string& tip_link = "") const;
 
   [[nodiscard]] moveit_cpp::PlanningComponent& planningComponent() const;
 

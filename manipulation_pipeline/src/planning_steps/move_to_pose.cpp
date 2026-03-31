@@ -96,8 +96,9 @@ MoveToPose::plan(const RobotModel& robot_model,
   tf2::convert(target_pose, target_pose_msg.pose);
 
   const auto initial_state = context.planning_scene->getCurrentState();
+  const auto constraints   = convertConstraints(m_goal->constraints, group_interface.resolveTip());
   const auto trajectory =
-    planner.plan(initial_state, target_pose_msg, tip_link, context.planning_scene);
+    planner.plan(initial_state, target_pose_msg, tip_link, context.planning_scene, constraints);
   if (!trajectory)
   {
     throw std::runtime_error{fmt::format("Could not plan to pose: {}", planner.lastErrorMsg())};
