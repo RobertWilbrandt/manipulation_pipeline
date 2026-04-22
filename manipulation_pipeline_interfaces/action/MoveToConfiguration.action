@@ -14,6 +14,9 @@ string[] joint_names
 # Otherwise, this has to have one entry per joint in joint_group.
 float64[] positions
 
+# Constraints on planned motion
+TrajectoryConstraints constraints
+
 # Motion parameters to use during execution
 # If left unchanged, defaults from mapi configuration will be used.
 MotionParameters motion_parameters

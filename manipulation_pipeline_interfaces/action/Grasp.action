@@ -21,6 +21,9 @@ string object_name
 # Corresponds to a MoveIt collision object subframe. If left empty, the collision object pose will be used.
 string subframe
 
+# Constraints on initial free-space motion
+TrajectoryConstraints constraints
+
 # Pairs of links that should not get checked for collsions during approach and retract
 CollisionPair[] disabled_collisions
 

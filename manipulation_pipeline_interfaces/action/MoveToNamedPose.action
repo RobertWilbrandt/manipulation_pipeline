@@ -12,6 +12,9 @@ string pose_name
 # If left unchanged, defaults from mapi configuration will be used.
 MotionParameters motion_parameters
 
+# Constraints on planned motion
+TrajectoryConstraints constraints
+
 # Controller to use for trajectory execution
 # If left empty, a default controller is used
 string controller

@@ -25,11 +25,13 @@ rosidl_generate_interfaces(
     msg/CartesianLimits.msg
     msg/CollisionPair.msg
     msg/LinearMotion.msg
+    msg/LinkOrientationConstraint.msg
     msg/MotionParameters.msg
     msg/ObjectComponent.msg
     msg/Progress.msg
     msg/State.msg
     msg/ToolCommand.msg
+    msg/TrajectoryConstraints.msg
   DEPENDENCIES
     geometry_msgs
     sensor_msgs
