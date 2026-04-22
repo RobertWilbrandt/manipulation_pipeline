@@ -45,6 +45,7 @@
 #include <moveit/robot_state/robot_state.hpp>
 #include <moveit/robot_trajectory/robot_trajectory.hpp>
 #include <moveit/trajectory_processing/time_parameterization.hpp>
+#include <moveit_msgs/msg/constraints.hpp>
 #include <pilz_industrial_motion_planner/command_list_manager.hpp>
 #include <rclcpp/logger.hpp>
 #include <string>
@@ -71,21 +72,29 @@ public:
 
   [[nodiscard]] const std::string& lastErrorMsg() const;
 
-  robot_trajectory::RobotTrajectoryPtr plan(const moveit::core::RobotState& initial_state,
-                                            const std::string& target_pose,
-                                            const planning_scene::PlanningScenePtr& planning_scene);
+  robot_trajectory::RobotTrajectoryPtr
+  plan(const moveit::core::RobotState& initial_state,
+       const std::string& target_pose,
+       const planning_scene::PlanningScenePtr& planning_scene,
+       const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints{});
 
-  robot_trajectory::RobotTrajectoryPtr plan(const moveit::core::RobotState& initial_state,
-                                            const moveit::core::RobotState& target_state,
-                                            const planning_scene::PlanningScenePtr& planning_scene);
-  robot_trajectory::RobotTrajectoryPtr plan(const moveit::core::RobotState& initial_state,
-                                            std::vector<moveit::core::RobotState>& target_states,
-                                            const planning_scene::PlanningScenePtr& planning_scene);
+  robot_trajectory::RobotTrajectoryPtr
+  plan(const moveit::core::RobotState& initial_state,
+       const moveit::core::RobotState& target_state,
+       const planning_scene::PlanningScenePtr& planning_scene,
+       const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints{});
+  robot_trajectory::RobotTrajectoryPtr
+  plan(const moveit::core::RobotState& initial_state,
+       std::vector<moveit::core::RobotState>& target_states,
+       const planning_scene::PlanningScenePtr& planning_scene,
+       const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints{});
 
-  robot_trajectory::RobotTrajectoryPtr plan(const moveit::core::RobotState& initial_state,
-                                            const geometry_msgs::msg::PoseStamped& target_pose,
-                                            const moveit::core::LinkModel* tip,
-                                            const planning_scene::PlanningScenePtr& planning_scene);
+  robot_trajectory::RobotTrajectoryPtr
+  plan(const moveit::core::RobotState& initial_state,
+       const geometry_msgs::msg::PoseStamped& target_pose,
+       const moveit::core::LinkModel* tip,
+       const planning_scene::PlanningScenePtr& planning_scene,
+       const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints{});
 
   robot_trajectory::RobotTrajectoryPtr planCartesianSequence(
     const moveit::core::RobotState& initial_state,
@@ -108,7 +117,8 @@ public:
 private:
   robot_trajectory::RobotTrajectoryPtr
   doPlan(const moveit_cpp::PlanningComponent::PlanRequestParameters& params,
-         const planning_scene::PlanningScenePtr& planning_scene);
+         const planning_scene::PlanningScenePtr& planning_scene,
+         const moveit_msgs::msg::Constraints& path_constraints);
 
   rclcpp::Logger m_log;
   rclcpp::Clock::SharedPtr m_clock;

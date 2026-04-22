@@ -78,7 +78,8 @@ const std::string& Planner::lastErrorMsg() const
 std::shared_ptr<robot_trajectory::RobotTrajectory>
 Planner::plan(const moveit::core::RobotState& initial_state,
               const std::string& target_pose,
-              const planning_scene::PlanningScenePtr& planning_scene)
+              const planning_scene::PlanningScenePtr& planning_scene,
+              const moveit_msgs::msg::Constraints& path_constraints)
 {
   RCLCPP_INFO(m_log,
               "Planning motion to named pose '%s' (group '%s')",
@@ -98,13 +99,14 @@ Planner::plan(const moveit::core::RobotState& initial_state,
   m_planning_component->setStartState(initial_state);
   m_planning_component->setGoal(target_pose);
 
-  return doPlan(m_params, planning_scene);
+  return doPlan(m_params, planning_scene, path_constraints);
 }
 
 std::shared_ptr<robot_trajectory::RobotTrajectory>
 Planner::plan(const moveit::core::RobotState& initial_state,
               const moveit::core::RobotState& target_state,
-              const planning_scene::PlanningScenePtr& planning_scene)
+              const planning_scene::PlanningScenePtr& planning_scene,
+              const moveit_msgs::msg::Constraints& path_constraints)
 {
   RCLCPP_INFO(
     m_log, "Planning free-space motion to configuration (group '%s')", m_group->getName().c_str());
@@ -112,13 +114,14 @@ Planner::plan(const moveit::core::RobotState& initial_state,
   m_planning_component->setStartState(initial_state);
   m_planning_component->setGoal(target_state);
 
-  return doPlan(m_params, planning_scene);
+  return doPlan(m_params, planning_scene, path_constraints);
 }
 
 robot_trajectory::RobotTrajectoryPtr
 Planner::plan(const moveit::core::RobotState& initial_state,
               std::vector<moveit::core::RobotState>& target_states,
-              const planning_scene::PlanningScenePtr& planning_scene)
+              const planning_scene::PlanningScenePtr& planning_scene,
+              const moveit_msgs::msg::Constraints& path_constraints)
 {
   RCLCPP_INFO(m_log,
               "Planning free-space motion to set of configurations (group '%s')",
@@ -135,14 +138,15 @@ Planner::plan(const moveit::core::RobotState& initial_state,
     [&](const auto& s) { return kinematic_constraints::constructGoalConstraints(s, m_group); });
   m_planning_component->setGoal(goal_constraints);
 
-  return doPlan(m_params, planning_scene);
+  return doPlan(m_params, planning_scene, path_constraints);
 }
 
 robot_trajectory::RobotTrajectoryPtr
 Planner::plan(const moveit::core::RobotState& initial_state,
               const geometry_msgs::msg::PoseStamped& target_pose,
               const moveit::core::LinkModel* tip,
-              const planning_scene::PlanningScenePtr& planning_scene)
+              const planning_scene::PlanningScenePtr& planning_scene,
+              const moveit_msgs::msg::Constraints& path_constraints)
 {
   RCLCPP_INFO(
     m_log,
@@ -162,7 +166,7 @@ Planner::plan(const moveit::core::RobotState& initial_state,
   m_planning_component->setStartState(initial_state);
   m_planning_component->setGoal(target_pose, tip->getName());
 
-  return doPlan(m_params, planning_scene);
+  return doPlan(m_params, planning_scene, path_constraints);
 }
 
 robot_trajectory::RobotTrajectoryPtr
@@ -329,8 +333,11 @@ void Planner::retimeTrajectory(robot_trajectory::RobotTrajectory& trajectory) co
 
 robot_trajectory::RobotTrajectoryPtr
 Planner::doPlan(const moveit_cpp::PlanningComponent::PlanRequestParameters& params,
-                const planning_scene::PlanningScenePtr& planning_scene)
+                const planning_scene::PlanningScenePtr& planning_scene,
+                const moveit_msgs::msg::Constraints& path_constraints)
 {
+  m_planning_component->setPathConstraints(path_constraints);
+
   m_last_error = std::nullopt;
 
   const auto time_start = m_clock->now();
