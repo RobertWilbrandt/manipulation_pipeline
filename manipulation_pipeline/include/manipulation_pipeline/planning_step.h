@@ -45,6 +45,7 @@
 #include <manipulation_pipeline_interfaces/msg/cartesian_limits.hpp>
 #include <manipulation_pipeline_interfaces/msg/motion_parameters.hpp>
 #include <manipulation_pipeline_interfaces/msg/tool_command.hpp>
+#include <manipulation_pipeline_interfaces/msg/trajectory_constraints.hpp>
 #include <moveit/moveit_cpp/planning_component.hpp>
 #include <moveit/robot_trajectory/robot_trajectory.hpp>
 #include <rclcpp/logger.hpp>
@@ -101,6 +102,9 @@ protected:
                    const Planner& planner,
                    moveit::core::RobotState& current_state,
                    const manipulation_pipeline_interfaces::msg::ToolCommand& cmd) const;
+
+  moveit_msgs::msg::Constraints createConstraints(
+    const manipulation_pipeline_interfaces::msg::TrajectoryConstraints& constraints) const;
 
   rclcpp::Logger m_log;
 

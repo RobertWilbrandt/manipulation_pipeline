@@ -159,8 +159,8 @@ ManipulationPlan ManipulationPlanningStepBase::planManipulation(
                  [&](const auto& t) { return t->getFirstWayPoint(); });
 
   RCLCPP_INFO(log, "Planning PTP trajectory");
-  auto ptp_trajectory =
-    planner.plan(planning_scene->getCurrentState(), ptp_goal_states, planning_scene);
+  auto ptp_trajectory = planner.plan(
+    planning_scene->getCurrentState(), ptp_goal_states, planning_scene, trajectoryConstraints());
   if (!ptp_trajectory)
   {
     throw std::runtime_error{"Unable to plan ptp trajectory"};

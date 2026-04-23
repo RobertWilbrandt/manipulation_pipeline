@@ -82,7 +82,10 @@ MoveToNamedPose::plan(const RobotModel& robot_model,
   context.plan_visualizer->publish();
 
   // Plan trajectory
-  const auto trajectory = planner.plan(initial_state, m_goal->pose_name, context.planning_scene);
+  const auto trajectory = planner.plan(initial_state,
+                                       m_goal->pose_name,
+                                       context.planning_scene,
+                                       createConstraints(m_goal->constraints));
   if (!trajectory)
   {
     throw std::runtime_error{

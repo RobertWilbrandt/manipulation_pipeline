@@ -161,4 +161,50 @@ PlanningStep::createToolAction(const GroupInterface& group_interface,
   }
 }
 
+moveit_msgs::msg::Constraints PlanningStep::createConstraints(
+  const manipulation_pipeline_interfaces::msg::TrajectoryConstraints& constraints) const
+{
+  moveit_msgs::msg::Constraints result;
+  result.name = "Mapi trajectory constraints";
+
+  std::size_t loc_cnt = 0;
+  for (const auto& loc : constraints.link_orientation_constraints)
+  {
+    RCLCPP_INFO(
+      m_log,
+      "Creating orientations constraint for link '%s': [%.02f, %.02f, %.02f, %.02f] (frame "
+      "'%s') +- [%.02f, %.02f, %.02f]",
+      loc.link_name.c_str(),
+      loc.target_orientation.quaternion.x,
+      loc.target_orientation.quaternion.y,
+      loc.target_orientation.quaternion.z,
+      loc.target_orientation.quaternion.w,
+      loc.target_orientation.header.frame_id.c_str(),
+      loc.tolerances.x,
+      loc.tolerances.y,
+      loc.tolerances.z);
+
+    moveit_msgs::msg::OrientationConstraint oc;
+    oc.header.frame_id = loc.target_orientation.header.frame_id;
+    oc.orientation     = loc.target_orientation.quaternion;
+
+    oc.link_name = loc.link_name;
+
+    oc.absolute_x_axis_tolerance = loc.tolerances.x;
+    oc.absolute_y_axis_tolerance = loc.tolerances.y;
+    oc.absolute_z_axis_tolerance = loc.tolerances.z;
+
+    oc.parameterization = moveit_msgs::msg::OrientationConstraint::ROTATION_VECTOR;
+
+    oc.weight = 1.0;
+
+    result.orientation_constraints.push_back(oc);
+    ++loc_cnt;
+  }
+
+  RCLCPP_INFO(m_log, "Created %zu link orientation constraints", loc_cnt);
+
+  return result;
+}
+
 } // namespace manipulation_pipeline

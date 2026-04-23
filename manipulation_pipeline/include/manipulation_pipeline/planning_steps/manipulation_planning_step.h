@@ -98,6 +98,8 @@ protected:
 
   virtual void disableCollisions(planning_scene::PlanningScene& planning_scene) const = 0;
 
+  virtual moveit_msgs::msg::Constraints trajectoryConstraints() const = 0;
+
   std::vector<Eigen::Isometry3d>
   convertLinearMotion(const manipulation_pipeline_interfaces::msg::LinearMotion& msg,
                       const Eigen::Isometry3d& offset) const;
@@ -134,6 +136,8 @@ protected:
     const manipulation_pipeline_interfaces::msg::CartesianLimits& limits) const override;
   manipulation_pipeline_interfaces::msg::CartesianLimits retractLimits(
     const manipulation_pipeline_interfaces::msg::CartesianLimits& limits) const override;
+
+  moveit_msgs::msg::Constraints trajectoryConstraints() const override;
 
   void disableCollisions(planning_scene::PlanningScene& planning_scene) const override;
 };
@@ -191,6 +195,13 @@ void ManipulationPlanningStep<ActionT>::disableCollisions(
   {
     cartesian_planning_scene_acm.setEntry(disabled_collision.link1, disabled_collision.link2, true);
   }
+}
+
+template <typename ActionT>
+moveit_msgs::msg::Constraints ManipulationPlanningStep<ActionT>::trajectoryConstraints() const
+{
+  return ActionPlanningStep<ActionT>::createConstraints(
+    ActionPlanningStep<ActionT>::m_goal->constraints);
 }
 
 } // namespace manipulation_pipeline

@@ -93,7 +93,8 @@ MoveToConfiguration::plan(const RobotModel& robot_model,
   }
 
   // Plan trajectory
-  const auto trajectory = planner.plan(initial_state, target_state, context.planning_scene);
+  const auto trajectory = planner.plan(
+    initial_state, target_state, context.planning_scene, createConstraints(m_goal->constraints));
   if (!trajectory)
   {
     throw std::runtime_error{
