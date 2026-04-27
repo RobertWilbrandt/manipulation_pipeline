@@ -135,6 +135,7 @@ class MapiClient:
         client,
         action_type,
         expected_result="success",
+        timeout_sec=60.0,
         **kwargs,
     ):
         goal = action_type.Goal(**kwargs)
@@ -145,12 +146,17 @@ class MapiClient:
         goal_handle = goal_future.result()
         assert goal_handle.accepted
         logging.info(f"Goal accepted")
+        t_before = self._node.get_clock().now()
 
         result_future = goal_handle.get_result_async()
-        rclpy.spin_until_future_complete(self._node, result_future, timeout_sec=10.0)
+        rclpy.spin_until_future_complete(
+            self._node, result_future, timeout_sec=timeout_sec
+        )
         assert result_future.done()
         result = result_future.result()
-        logging.info(f"Received result: {result}")
+        logging.info(
+            f"Received result: {result} after {(self._node.get_clock().now() - t_before).nanoseconds / 1e9:.1f} seconds"
+        )
 
         if expected_result == "success":
             assert result.status == GoalStatus.STATUS_SUCCEEDED

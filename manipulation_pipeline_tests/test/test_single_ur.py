@@ -25,17 +25,28 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-from math import sqrt
+from math import pi, sqrt
 
 import launch_pytest
 import pytest
-from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
+from geometry_msgs.msg import (
+    Point,
+    Pose,
+    PoseStamped,
+    Quaternion,
+    QuaternionStamped,
+    Vector3,
+)
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 from launch_testing.actions import ReadyToTest
+from manipulation_pipeline_interfaces.msg import (
+    LinkOrientationConstraint,
+    TrajectoryConstraints,
+)
 from std_msgs.msg import Header
 
 
@@ -91,4 +102,46 @@ def test_move_to_pose(mapi_client):
                 orientation=Quaternion(x=-1.0, w=0.0),
             ),
         )
+    )
+
+
+@pytest.mark.launch(fixture=launch_description)
+def test_move_constrained(mapi_client):
+    mapi_client.move_to_named_pose(pose_name="test_1")
+
+    mapi_client.move_to_pose(
+        pose=PoseStamped(
+            header=Header(frame_id="world"),
+            pose=Pose(
+                position=Point(x=-0.4, y=0.6, z=0.5),
+                orientation=Quaternion(x=1.0, w=0.0),
+            ),
+        ),
+        constraints=TrajectoryConstraints(
+            link_orientation_constraints=[
+                LinkOrientationConstraint(
+                    link_name="ur_tool0",
+                    target_orientation=QuaternionStamped(
+                        header=Header(frame_id="world"),
+                        quaternion=Quaternion(x=1.0, w=0.0),
+                    ),
+                    tolerances=Vector3(x=0.5, y=0.5, z=pi + 0.1),
+                )
+            ]
+        ),
+    )
+    mapi_client.move_to_named_pose(
+        pose_name="test_1",
+        constraints=TrajectoryConstraints(
+            link_orientation_constraints=[
+                LinkOrientationConstraint(
+                    link_name="ur_tool0",
+                    target_orientation=QuaternionStamped(
+                        header=Header(frame_id="world"),
+                        quaternion=Quaternion(x=1.0, w=0.0),
+                    ),
+                    tolerances=Vector3(x=0.5, y=0.5, z=pi + 0.1),
+                )
+            ]
+        ),
     )

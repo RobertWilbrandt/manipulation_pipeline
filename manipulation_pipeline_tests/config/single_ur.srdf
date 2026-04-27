@@ -27,7 +27,7 @@
         <joint name="ur_shoulder_pan_joint" value="-1.5708"/>
         <joint name="ur_wrist_1_joint" value="-1.5708"/>
         <joint name="ur_wrist_2_joint" value="-1.5708"/>
-        <joint name="ur_wrist_3_joint" value="3.1416"/>
+        <joint name="ur_wrist_3_joint" value="1.5708"/>
     </group_state>
     <group_state name="test_2" group="ur">
         <joint name="ur_elbow_joint" value="2.3562"/>
@@ -35,9 +35,23 @@
         <joint name="ur_shoulder_pan_joint" value="1.5708"/>
         <joint name="ur_wrist_1_joint" value="0"/>
         <joint name="ur_wrist_2_joint" value="1.5708"/>
-        <joint name="ur_wrist_3_joint" value="-3.1416"/>
+        <joint name="ur_wrist_3_joint" value="-1.5708"/>
     </group_state>
     <!--DISABLE COLLISIONS: By default it is assumed that any link of the robot could potentially come into collision with any other link in the robot. This tag disables collision checking between a specified pair of links. -->
+    <disable_collisions link1="box_1" link2="box_2" reason="Adjacent"/>
+    <disable_collisions link1="box_1" link2="box_3" reason="Adjacent"/>
+    <disable_collisions link1="box_1" link2="floor" reason="Adjacent"/>
+    <disable_collisions link1="box_1" link2="ur_base_link_inertia" reason="Adjacent"/>
+    <disable_collisions link1="box_1" link2="ur_shoulder_link" reason="Never"/>
+    <disable_collisions link1="box_2" link2="box_3" reason="Adjacent"/>
+    <disable_collisions link1="box_2" link2="floor" reason="Adjacent"/>
+    <disable_collisions link1="box_2" link2="ur_base_link_inertia" reason="Adjacent"/>
+    <disable_collisions link1="box_2" link2="ur_shoulder_link" reason="Never"/>
+    <disable_collisions link1="box_3" link2="floor" reason="Adjacent"/>
+    <disable_collisions link1="box_3" link2="ur_base_link_inertia" reason="Adjacent"/>
+    <disable_collisions link1="box_3" link2="ur_shoulder_link" reason="Never"/>
+    <disable_collisions link1="floor" link2="ur_base_link_inertia" reason="Adjacent"/>
+    <disable_collisions link1="floor" link2="ur_shoulder_link" reason="Never"/>
     <disable_collisions link1="ur_base_link_inertia" link2="ur_shoulder_link" reason="Adjacent"/>
     <disable_collisions link1="ur_base_link_inertia" link2="ur_upper_arm_link" reason="Never"/>
     <disable_collisions link1="ur_base_link_inertia" link2="ur_wrist_1_link" reason="Never"/>
