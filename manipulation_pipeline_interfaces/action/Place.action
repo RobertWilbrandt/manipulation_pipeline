@@ -22,6 +22,8 @@ geometry_msgs/PoseStamped pose
 # Corresponds to a MoveIt collision object subframe. If left empty, the collision object pose will be used.
 string subframe
 
+MotionType motion_type
+
 # Pairs of links that should not get checked for collsions during approach and retract
 CollisionPair[] disabled_collisions
 
@@ -41,6 +43,8 @@ MotionParameters motion_parameters
 # Link to attach collision object to after release
 # Object will not get attached if left empty.
 string attach_link
+
+CartesianLimits limits
 
 # Controller to use for trajectory execution
 # If left empty, a default controller is used

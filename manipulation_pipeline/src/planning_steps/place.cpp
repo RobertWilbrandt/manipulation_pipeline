@@ -131,10 +131,8 @@ Place::plan(const RobotModel& robot_model,
   // We plan the approach motion in reverse
   std::reverse(approach_waypoints.begin(), approach_waypoints.end());
 
-  manipulation_pipeline_interfaces::msg::MotionType motion_type;
-  motion_type.type             = manipulation_pipeline_interfaces::msg::MotionType::TYPE_FREE_SPACE;
   const auto manipulation_plan = planManipulation(target_pose,
-                                                  motion_type,
+                                                  m_goal->motion_type,
                                                   tip_link,
                                                   planning_interface.referenceLink(),
                                                   planning_interface.group(),
