@@ -42,6 +42,7 @@
 #include <Eigen/Geometry>
 #include <manipulation_pipeline_interfaces/msg/cartesian_limits.hpp>
 #include <manipulation_pipeline_interfaces/msg/linear_motion.hpp>
+#include <manipulation_pipeline_interfaces/msg/motion_type.hpp>
 #include <moveit/robot_state/robot_state.hpp>
 #include <moveit_msgs/msg/attached_collision_object.hpp>
 #include <vector>
@@ -76,6 +77,7 @@ public:
 protected:
   ManipulationPlan
   planManipulation(const Eigen::Isometry3d& target_pose,
+                   const manipulation_pipeline_interfaces::msg::MotionType& motion_type,
                    const moveit::core::LinkModel* tip_link,
                    const moveit::core::LinkModel* reference_link,
                    const moveit::core::JointModelGroup* joint_group,
@@ -103,6 +105,18 @@ protected:
                       const Eigen::Isometry3d& offset) const;
 
 private:
+  ManipulationPlan
+  planCartesian(const Eigen::Isometry3d& target_pose,
+                const moveit::core::LinkModel* tip_link,
+                const moveit::core::LinkModel* reference_link,
+                const moveit::core::JointModelGroup* joint_group,
+                const manipulation_pipeline_interfaces::msg::CartesianLimits& limits,
+                const moveit_msgs::msg::AttachedCollisionObject& collision_object,
+                const std::shared_ptr<planning_scene::PlanningScene>& planning_scene,
+                Planner& planner,
+                MarkerInterface& visualizer,
+                const rclcpp::Logger& log) const;
+
   void visualizePlan(const Eigen::Isometry3d& inital_pose,
                      const std::vector<Eigen::Isometry3d>& approach_waypoints,
                      const Eigen::Isometry3d& target_pose,

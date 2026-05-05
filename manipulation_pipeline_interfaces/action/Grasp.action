@@ -1,9 +1,9 @@
 # Grasp a collision object
-# This includes:
-#   - Free-space motion to approach pose
-#   - Cartesian motion to grasp pose
-#   - Gripper action
-#   - Cartesian retract
+# This includes four motion segments:
+#   - (1) Motion to approach pose
+#   - (2) Cartesian motion to grasp pose
+#   - (3) Gripper action
+#   - (4) Cartesian retract
 
 # End effector to use
 # If this is empty, a default end effector is assumed. This is only possible if there is exactly one end effector in robot_description_semantic.
@@ -21,21 +21,28 @@ string object_name
 # Corresponds to a MoveIt collision object subframe. If left empty, the collision object pose will be used.
 string subframe
 
-# Pairs of links that should not get checked for collsions during approach and retract
+# Type of motion to use during (1)
+MotionType motion_type
+
+# Pairs of links that should not get checked for collsions during approach (2) and retract (4)
 CollisionPair[] disabled_collisions
 
-# Motion for cartesian approach
+# Motion for cartesian approach (2)
 LinearMotion approach
 
-# Command to execute once the tool is in place
+# Command to execute once the tool is in place (3)
 ToolCommand grasp_action
 
-# Motion for cartesian retraction
+# Motion for cartesian retraction (4)
 LinearMotion retract
 
-# Motion parameters to use during execution
+# Motion parameters to use during execution of (1) if motion_type is TYPE_FREE_SPACE
 # If left unchanged, defaults from mapi configuration will be used
 MotionParameters motion_parameters
+
+# Cartesian motion limits during (1) if motion_type is TYPE_LINEAR
+# If left unchanged, defaults from mapi configuration will be used
+CartesianLimits limits
 
 # Controller to use for trajectory execution
 # If left empty, a default controller is used

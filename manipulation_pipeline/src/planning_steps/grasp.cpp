@@ -117,6 +117,7 @@ Grasp::plan(const RobotModel& robot_model,
 
   // Plan
   const auto manipulation_plan = planManipulation(target_pose,
+                                                  m_goal->motion_type,
                                                   tip_link,
                                                   planning_interface.referenceLink(),
                                                   planning_interface.group(),

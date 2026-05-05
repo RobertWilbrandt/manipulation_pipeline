@@ -26,6 +26,7 @@ rosidl_generate_interfaces(
     msg/CollisionPair.msg
     msg/LinearMotion.msg
     msg/MotionParameters.msg
+    msg/MotionType.msg
     msg/ObjectComponent.msg
     msg/Progress.msg
     msg/State.msg

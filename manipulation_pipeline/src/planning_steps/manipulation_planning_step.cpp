@@ -45,6 +45,7 @@ namespace manipulation_pipeline {
 
 ManipulationPlan ManipulationPlanningStepBase::planManipulation(
   const Eigen::Isometry3d& target_pose,
+  const manipulation_pipeline_interfaces::msg::MotionType& motion_type,
   const moveit::core::LinkModel* tip_link,
   const moveit::core::LinkModel* reference_link,
   const moveit::core::JointModelGroup* joint_group,
@@ -69,6 +70,20 @@ ManipulationPlan ManipulationPlanningStepBase::planManipulation(
               target_pose_msg.orientation.w,
               reference_link->getName().c_str(),
               tip_link->getName().c_str());
+
+  if (motion_type.type == manipulation_pipeline_interfaces::msg::MotionType::TYPE_LINEAR)
+  {
+    return planCartesian(target_pose,
+                         tip_link,
+                         reference_link,
+                         joint_group,
+                         limits,
+                         collision_object,
+                         planning_scene,
+                         planner,
+                         visualizer,
+                         log);
+  }
 
   const auto reference_frame_transform =
     planning_scene->getFrameTransform(reference_link->getName());
@@ -219,6 +234,94 @@ std::vector<Eigen::Isometry3d> ManipulationPlanningStepBase::convertLinearMotion
   }
 
   return waypoints;
+}
+
+ManipulationPlan ManipulationPlanningStepBase::planCartesian(
+  const Eigen::Isometry3d& target_pose,
+  const moveit::core::LinkModel* tip_link,
+  const moveit::core::LinkModel* reference_link,
+  const moveit::core::JointModelGroup* joint_group,
+  const manipulation_pipeline_interfaces::msg::CartesianLimits& limits,
+  const moveit_msgs::msg::AttachedCollisionObject& collision_object,
+  const std::shared_ptr<planning_scene::PlanningScene>& planning_scene,
+  Planner& planner,
+  MarkerInterface& visualizer,
+  const rclcpp::Logger& log) const
+{
+  const auto reference_frame_transform =
+    planning_scene->getFrameTransform(reference_link->getName());
+
+  auto approach_waypoints      = approachWaypoints(target_pose);
+  const auto retract_waypoints = retractWaypoints(target_pose);
+
+  // Visualize plan
+  visualizePlan(reference_frame_transform.inverse() *
+                  planning_scene->getFrameTransform(tip_link->getName()),
+                approach_waypoints,
+                target_pose,
+                retract_waypoints,
+                reference_link->getName(),
+                visualizer);
+
+  // Plan motion to approach pose
+  RCLCPP_INFO(log, "Planning cartesian motion to approach");
+  auto initial_trajectory = planner.planCartesianSequence(planning_scene->getCurrentState(),
+                                                          reference_link->getName(),
+                                                          std::vector{approach_waypoints[0]},
+                                                          tip_link,
+                                                          planning_scene,
+                                                          &limits);
+  if (!initial_trajectory || initial_trajectory->empty())
+  {
+    throw std::runtime_error{"Unable to plan initial linear trajectory"};
+  }
+
+  // Plan approach motion
+  RCLCPP_INFO(log, "Planning approach");
+  const auto approach_limits = approachLimits(limits);
+
+  const auto cartesian_planning_scene = planning_scene::PlanningScene::clone(planning_scene);
+  disableCollisions(*cartesian_planning_scene);
+
+  approach_waypoints.erase(approach_waypoints.begin()); // We are already at first approach point
+  approach_waypoints.push_back(target_pose);
+
+  auto approach_trajectory = planner.planCartesianSequence(initial_trajectory->getLastWayPoint(),
+                                                           reference_link->getName(),
+                                                           approach_waypoints,
+                                                           tip_link,
+                                                           cartesian_planning_scene,
+                                                           &approach_limits);
+  if (!approach_trajectory || approach_trajectory->empty())
+  {
+    throw std::runtime_error{"Unable to plan approach trajectory"};
+  }
+
+  // Plan retract motion
+  RCLCPP_INFO(log, "Planning retract");
+  const auto retract_limits = retractLimits(limits);
+
+  const auto attached_planning_scene =
+    planning_scene::PlanningScene::clone(cartesian_planning_scene);
+  attached_planning_scene->processAttachedCollisionObjectMsg(collision_object);
+
+  auto retract_trajectory = planner.planCartesianSequence(approach_trajectory->getLastWayPoint(),
+                                                          reference_link->getName(),
+                                                          retract_waypoints,
+                                                          tip_link,
+                                                          attached_planning_scene,
+                                                          &retract_limits);
+  if (!retract_trajectory)
+  {
+    throw std::runtime_error{"Unable to plan retract trajectory"};
+  }
+
+  // Create result
+  initial_trajectory->setWayPointDurationFromPrevious(0, 0.5);
+  approach_trajectory->setWayPointDurationFromPrevious(0, 0.1);
+  retract_trajectory->setWayPointDurationFromPrevious(0, 0.1);
+  return ManipulationPlan{
+    std::move(initial_trajectory), std::move(approach_trajectory), std::move(retract_trajectory)};
 }
 
 void ManipulationPlanningStepBase::visualizePlan(
