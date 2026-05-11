@@ -59,6 +59,12 @@ moveit_cpp::PlanningComponent::PlanRequestParameters Place::applyRequestParams(
   return applyMotionParameters(m_goal->motion_parameters, default_params);
 }
 
+manipulation_pipeline_interfaces::msg::CartesianLimits Place::applyRequestLimits(
+  const manipulation_pipeline_interfaces::msg::CartesianLimits& cartesian_limits) const
+{
+  return applyCartesianLimits(m_goal->limits, cartesian_limits);
+}
+
 std::shared_ptr<ActionSequence>
 Place::plan(const RobotModel& robot_model,
             const moveit_cpp::PlanningComponent::PlanRequestParameters& params,

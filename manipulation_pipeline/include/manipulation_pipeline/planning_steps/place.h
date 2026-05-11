@@ -58,6 +58,8 @@ public:
 
   [[nodiscard]] moveit_cpp::PlanningComponent::PlanRequestParameters applyRequestParams(
     const moveit_cpp::PlanningComponent::PlanRequestParameters& default_params) const override;
+  [[nodiscard]] manipulation_pipeline_interfaces::msg::CartesianLimits applyRequestLimits(
+    const manipulation_pipeline_interfaces::msg::CartesianLimits& cartesian_limits) const override;
 
   std::shared_ptr<ActionSequence>
   plan(const RobotModel& robot_model,

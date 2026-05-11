@@ -65,6 +65,12 @@ moveit_cpp::PlanningComponent::PlanRequestParameters Grasp::applyRequestParams(
   return applyMotionParameters(m_goal->motion_parameters, default_params);
 }
 
+manipulation_pipeline_interfaces::msg::CartesianLimits Grasp::applyRequestLimits(
+  const manipulation_pipeline_interfaces::msg::CartesianLimits& cartesian_limits) const
+{
+  return applyCartesianLimits(m_goal->limits, cartesian_limits);
+}
+
 std::shared_ptr<ActionSequence>
 Grasp::plan(const RobotModel& robot_model,
             const moveit_cpp::PlanningComponent::PlanRequestParameters& params,
@@ -126,7 +132,6 @@ Grasp::plan(const RobotModel& robot_model,
                                                   context.planning_scene,
                                                   planner,
                                                   *context.plan_visualizer,
-
                                                   m_log);
 
   // Bookkeeping in planning scene
