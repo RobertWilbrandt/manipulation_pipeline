@@ -123,11 +123,13 @@ private:
                      const std::vector<Eigen::Isometry3d>& retract_waypoints,
                      const std::string& reference_frame,
                      MarkerInterface& visualizer) const;
-  std::vector<moveit::core::RobotState> sampleIk(const Eigen::Isometry3d& target_pose,
-                                                 const moveit::core::RobotState& reference_state,
-                                                 const moveit::core::LinkModel* tip_link,
-                                                 const moveit::core::JointModelGroup* group,
-                                                 const rclcpp::Logger& log) const;
+  std::vector<moveit::core::RobotState>
+  sampleIk(const Eigen::Isometry3d& target_pose,
+           const moveit::core::RobotState& reference_state,
+           const moveit::core::LinkModel* tip_link,
+           const moveit::core::JointModelGroup* group,
+           const planning_scene::PlanningScene& planning_scene,
+           const rclcpp::Logger& log) const;
 };
 
 template <typename ActionT>

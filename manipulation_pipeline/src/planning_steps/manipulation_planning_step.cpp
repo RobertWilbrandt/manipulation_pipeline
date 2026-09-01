@@ -119,6 +119,7 @@ ManipulationPlan ManipulationPlanningStepBase::planManipulation(
                                    planning_scene->getCurrentState(),
                                    tip_link,
                                    joint_group,
+                                   *cartesian_planning_scene,
                                    log);
 
   // Calculate trajectories for approach and retract
@@ -346,11 +347,14 @@ ManipulationPlanningStepBase::sampleIk(const Eigen::Isometry3d& target_pose,
                                        const moveit::core::RobotState& reference_state,
                                        const moveit::core::LinkModel* tip_link,
                                        const moveit::core::JointModelGroup* group,
+                                       const planning_scene::PlanningScene& planning_scene,
                                        const rclcpp::Logger& log) const
 {
   // Sample IK solutions
   IkSampler sampler{reference_state, tip_link, group, target_pose, 50, log};
-  const auto ik_samples = sampler.sampleAll();
+  const auto ik_samples = sampler.sampleAll([&](const moveit::core::RobotState& robot_state) {
+    return planning_scene.isStateValid(robot_state, group->getName(), true);
+  });
 
   if (ik_samples.empty())
   {

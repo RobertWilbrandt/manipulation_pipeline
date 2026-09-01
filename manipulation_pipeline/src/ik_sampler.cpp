@@ -61,7 +61,7 @@ bool IkSampler::done() const
   return m_sample_cnt >= m_max_samples;
 }
 
-std::optional<moveit::core::RobotState> IkSampler::sample()
+std::optional<moveit::core::RobotState> IkSampler::sample(const ValidityCb& valid_cb)
 {
   ++m_sample_cnt;
 
@@ -78,8 +78,16 @@ std::optional<moveit::core::RobotState> IkSampler::sample()
   {
     if (isNew(m_sample_state, 0.1))
     {
-      m_sampled_states.push_back(m_sample_state);
-      return m_sample_state;
+      m_sample_state.update();
+      if (!valid_cb || valid_cb(m_sample_state))
+      {
+        m_sampled_states.push_back(m_sample_state);
+        return m_sample_state;
+      }
+      else
+      {
+        ++m_n_invalid;
+      }
     }
     else
     {
@@ -94,21 +102,22 @@ std::optional<moveit::core::RobotState> IkSampler::sample()
   return std::nullopt;
 }
 
-std::vector<moveit::core::RobotState> IkSampler::sampleAll()
+std::vector<moveit::core::RobotState> IkSampler::sampleAll(const ValidityCb& valid_cb)
 {
   std::vector<moveit::core::RobotState> samples;
   while (!done())
   {
-    if (const auto new_sample = sample(); new_sample)
+    if (const auto new_sample = sample(valid_cb); new_sample)
     {
       samples.push_back(std::move(*new_sample));
     }
   }
 
   RCLCPP_INFO(m_log,
-              "Created %zu IK samples (%zu IK errors, %zu discarded)",
+              "Created %zu IK samples (%zu IK errors, %zu invalid, %zu discarded)",
               samples.size(),
               m_n_ik_error,
+              m_n_invalid,
               m_n_not_unique);
 
   return samples;

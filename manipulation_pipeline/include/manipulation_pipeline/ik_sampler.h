@@ -39,6 +39,7 @@
 
 #include <Eigen/Geometry>
 #include <boost/random/sobol.hpp>
+#include <functional>
 #include <moveit/robot_state/robot_state.hpp>
 #include <rclcpp/logger.hpp>
 
@@ -52,6 +53,8 @@ namespace manipulation_pipeline {
 class IkSampler
 {
 public:
+  using ValidityCb = std::function<bool(const moveit::core::RobotState&)>;
+
   /*! \brief Create new sampler
    *
    * \param reference_state Robot state that will be used to generate new samples
@@ -76,14 +79,18 @@ public:
   /*! \brief Sample a new configuration
    *
    * This only returns a sample if it is different from previous samples.
+   *
+   * \param valid_cb Optional callback that checks if a configuration is valid - e.g. collision free
    */
-  std::optional<moveit::core::RobotState> sample();
+  std::optional<moveit::core::RobotState> sample(const ValidityCb& valid_cb = {});
 
   /*! \brief Sample all required states
    *
    * This is just a shorthand for calling sample() until done().
+   *
+   * \param valid_cb Optional callback that checks if a configuration is valid - e.g. collision free
    */
-  std::vector<moveit::core::RobotState> sampleAll();
+  std::vector<moveit::core::RobotState> sampleAll(const ValidityCb& valid_cb = {});
 
 private:
   bool isNew(const moveit::core::RobotState& state, double eps) const;
@@ -106,6 +113,7 @@ private:
   std::size_t m_sample_cnt = 0;
 
   std::size_t m_n_ik_error   = 0;
+  std::size_t m_n_invalid    = 0;
   std::size_t m_n_not_unique = 0;
 };
 
