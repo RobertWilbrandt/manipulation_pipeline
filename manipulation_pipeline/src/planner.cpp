@@ -38,6 +38,8 @@
 #include "manipulation_pipeline/planning_context.h"
 #include "manipulation_pipeline/robot_model.h"
 
+#include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <moveit/kinematic_constraints/utils.hpp>
 #include <moveit/robot_state/cartesian_interpolator.hpp>
 #include <moveit/trajectory_processing/time_optimal_trajectory_generation.hpp>
@@ -297,6 +299,20 @@ Planner::planCartesianSequence(const moveit::core::RobotState& initial_state,
     trajectory_generator.generate(planning_scene, req, res);
     if (res.error_code != res.error_code.SUCCESS)
     {
+      return robot_trajectory::RobotTrajectoryPtr{};
+    }
+
+    // Check for path validity
+    // The generator does not do this by default, so we need to verify this manually
+    if (std::vector<std::size_t> invalid_indices;
+        !planning_scene->isPathValid(*res.trajectory, m_group->getName(), true, &invalid_indices))
+    {
+      const auto i_str = fmt::format("[{}]", fmt::join(invalid_indices, ","));
+      RCLCPP_INFO(m_log,
+                  "Invalid path, %zu/%zu indices invalid: %s",
+                  invalid_indices.size(),
+                  res.trajectory->getWayPointCount(),
+                  i_str.c_str());
       return robot_trajectory::RobotTrajectoryPtr{};
     }
     trajectories.push_back(res.trajectory);
