@@ -51,6 +51,7 @@ ManipulationPlan ManipulationPlanningStepBase::planManipulation(
   const moveit::core::JointModelGroup* joint_group,
   const manipulation_pipeline_interfaces::msg::CartesianLimits& limits,
   const moveit_msgs::msg::AttachedCollisionObject& collision_object,
+  const manipulation_pipeline_interfaces::msg::ToolCommand& tool_command,
   const std::shared_ptr<planning_scene::PlanningScene>& planning_scene,
   Planner& planner,
   MarkerInterface& visualizer,
@@ -79,6 +80,7 @@ ManipulationPlan ManipulationPlanningStepBase::planManipulation(
                          joint_group,
                          limits,
                          collision_object,
+                         tool_command,
                          planning_scene,
                          planner,
                          visualizer,
@@ -108,10 +110,6 @@ ManipulationPlan ManipulationPlanningStepBase::planManipulation(
   const auto cartesian_planning_scene = planning_scene::PlanningScene::clone(planning_scene);
   disableCollisions(*cartesian_planning_scene);
 
-  const auto attached_planning_scene =
-    planning_scene::PlanningScene::clone(cartesian_planning_scene);
-  attached_planning_scene->processAttachedCollisionObjectMsg(collision_object);
-
   // Invert approach as we plan starting from ik sample
   std::reverse(approach_waypoints.begin(), approach_waypoints.end()); // We plan in reverse
 
@@ -129,7 +127,14 @@ ManipulationPlan ManipulationPlanningStepBase::planManipulation(
   {
     const auto& state = ik_samples[i];
 
-    RCLCPP_INFO(log, "Planning approach for sample %zu/%zu", i + 1, ik_samples.size());
+    std::vector<double> state_pos;
+    state.copyJointGroupPositions(joint_group, state_pos);
+    const auto state_pos_str = fmt::format("[{}]", fmt::join(state_pos, ", "));
+    RCLCPP_INFO(log,
+                "Planning approach for sample %zu/%zu: %s",
+                i + 1,
+                ik_samples.size(),
+                state_pos_str.c_str());
     auto approach_trajectory = planner.planCartesianSequence(state,
                                                              reference_link->getName(),
                                                              approach_waypoints,
@@ -142,13 +147,33 @@ ManipulationPlan ManipulationPlanningStepBase::planManipulation(
     }
     approach_trajectory->reverse();
 
-    RCLCPP_INFO(log, "Planning retract for sample %zu/%zu", i + 1, ik_samples.size());
-    auto retract_trajectory = planner.planCartesianSequence(state,
-                                                            reference_link->getName(),
-                                                            retract_waypoints,
-                                                            tip_link,
-                                                            attached_planning_scene,
-                                                            &retract_limits);
+    // Build the retract scene at this sample's grasp/place configuration, with the
+    // post-manipulation tool posture applied (gripper open for a place, closed for a grasp) so the
+    // retract is planned against the real end-effector state, then apply the attach/detach. A diff
+    // scene keeps this cheap despite being per-sample.
+    const auto retract_planning_scene = cartesian_planning_scene->diff();
+    retract_planning_scene->setCurrentState(state);
+    if (tool_command.command == manipulation_pipeline_interfaces::msg::ToolCommand::COMMAND_JOINT)
+    {
+      retract_planning_scene->getCurrentStateNonConst().setVariableValues(tool_command.joint_cmd);
+    }
+    retract_planning_scene->processAttachedCollisionObjectMsg(collision_object);
+
+    // Start the retract from the scene-consistent state (post attach/detach). The raw ik sample
+    // still carries the pre-manipulation attached body, which the planner would serialize into the
+    // request and re-attach on top of the just-placed world object.
+    RCLCPP_INFO(log,
+                "Planning retract for sample %zu/%zu: %s",
+                i + 1,
+                ik_samples.size(),
+                state_pos_str.c_str());
+    auto retract_trajectory =
+      planner.planCartesianSequence(retract_planning_scene->getCurrentState(),
+                                    reference_link->getName(),
+                                    retract_waypoints,
+                                    tip_link,
+                                    retract_planning_scene,
+                                    &retract_limits);
     if (!retract_trajectory)
     {
       continue;
@@ -244,6 +269,7 @@ ManipulationPlan ManipulationPlanningStepBase::planCartesian(
   const moveit::core::JointModelGroup* joint_group,
   const manipulation_pipeline_interfaces::msg::CartesianLimits& limits,
   const moveit_msgs::msg::AttachedCollisionObject& collision_object,
+  const manipulation_pipeline_interfaces::msg::ToolCommand& tool_command,
   const std::shared_ptr<planning_scene::PlanningScene>& planning_scene,
   Planner& planner,
   MarkerInterface& visualizer,
@@ -304,14 +330,28 @@ ManipulationPlan ManipulationPlanningStepBase::planCartesian(
 
   const auto attached_planning_scene =
     planning_scene::PlanningScene::clone(cartesian_planning_scene);
+  // Build the retract scene at the configuration the retract starts from, with the
+  // post-manipulation tool posture applied (gripper open for a place, closed for a grasp), then
+  // apply the attach/detach. Otherwise a detached (placed) object is dropped into the world at the
+  // wrong pose, an attached (grasped) object is anchored to the tip using the wrong transform, and
+  // the still-closed gripper spuriously collides with the just-released object.
+  attached_planning_scene->setCurrentState(approach_trajectory->getLastWayPoint());
+  if (tool_command.command == manipulation_pipeline_interfaces::msg::ToolCommand::COMMAND_JOINT)
+  {
+    attached_planning_scene->getCurrentStateNonConst().setVariableValues(tool_command.joint_cmd);
+  }
   attached_planning_scene->processAttachedCollisionObjectMsg(collision_object);
 
-  auto retract_trajectory = planner.planCartesianSequence(approach_trajectory->getLastWayPoint(),
-                                                          reference_link->getName(),
-                                                          retract_waypoints,
-                                                          tip_link,
-                                                          attached_planning_scene,
-                                                          &retract_limits);
+  // Start from the scene-consistent state (post attach/detach): the approach end state still
+  // carries the pre-manipulation attached body, which the planner would serialize and re-attach on
+  // top of the just-placed world object.
+  auto retract_trajectory =
+    planner.planCartesianSequence(attached_planning_scene->getCurrentState(),
+                                  reference_link->getName(),
+                                  retract_waypoints,
+                                  tip_link,
+                                  attached_planning_scene,
+                                  &retract_limits);
   if (!retract_trajectory)
   {
     throw std::runtime_error{"Unable to plan retract trajectory"};

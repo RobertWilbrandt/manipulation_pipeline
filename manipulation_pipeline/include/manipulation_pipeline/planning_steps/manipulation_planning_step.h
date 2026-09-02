@@ -43,6 +43,7 @@
 #include <manipulation_pipeline_interfaces/msg/cartesian_limits.hpp>
 #include <manipulation_pipeline_interfaces/msg/linear_motion.hpp>
 #include <manipulation_pipeline_interfaces/msg/motion_type.hpp>
+#include <manipulation_pipeline_interfaces/msg/tool_command.hpp>
 #include <moveit/robot_state/robot_state.hpp>
 #include <moveit_msgs/msg/attached_collision_object.hpp>
 #include <vector>
@@ -83,6 +84,7 @@ protected:
                    const moveit::core::JointModelGroup* joint_group,
                    const manipulation_pipeline_interfaces::msg::CartesianLimits& limits,
                    const moveit_msgs::msg::AttachedCollisionObject& collision_object,
+                   const manipulation_pipeline_interfaces::msg::ToolCommand& tool_command,
                    const std::shared_ptr<planning_scene::PlanningScene>& planning_scene,
                    Planner& planner,
                    MarkerInterface& visualizer,
@@ -112,6 +114,7 @@ private:
                 const moveit::core::JointModelGroup* joint_group,
                 const manipulation_pipeline_interfaces::msg::CartesianLimits& limits,
                 const moveit_msgs::msg::AttachedCollisionObject& collision_object,
+                const manipulation_pipeline_interfaces::msg::ToolCommand& tool_command,
                 const std::shared_ptr<planning_scene::PlanningScene>& planning_scene,
                 Planner& planner,
                 MarkerInterface& visualizer,

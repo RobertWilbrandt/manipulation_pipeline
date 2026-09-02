@@ -114,12 +114,23 @@ Grasp::plan(const RobotModel& robot_model,
                  std::back_inserter(ee_link_names),
                  [](const auto* link) { return link->getName(); });
 
-  // Create collision object
+  // Create collision object.
+  //
+  // The object pose is expressed relative to the grasping tip link (at the grasp the tip coincides
+  // with the target subframe, so the object origin sits at subframe_offset.inverse()). This keeps
+  // the attach independent of the robot configuration when processAttachedCollisionObjectMsg() is
+  // applied - otherwise the object would be anchored using whatever state the target planning scene
+  // currently holds, misplacing the in-hand object during retract planning.
+  geometry_msgs::msg::Pose object_pose_in_tip;
+  tf2::convert(Eigen::Isometry3d{subframe_offset.inverse()}, object_pose_in_tip);
+
   moveit_msgs::msg::AttachedCollisionObject attached_collision_object;
-  attached_collision_object.object           = collision_object;
-  attached_collision_object.object.operation = moveit_msgs::msg::CollisionObject::ADD;
-  attached_collision_object.link_name        = tip_link->getName();
-  attached_collision_object.touch_links      = ee_link_names;
+  attached_collision_object.object                 = collision_object;
+  attached_collision_object.object.operation       = moveit_msgs::msg::CollisionObject::ADD;
+  attached_collision_object.object.header.frame_id = tip_link->getName();
+  attached_collision_object.object.pose            = object_pose_in_tip;
+  attached_collision_object.link_name              = tip_link->getName();
+  attached_collision_object.touch_links            = ee_link_names;
 
   // Plan
   const auto manipulation_plan = planManipulation(target_pose,
@@ -129,6 +140,7 @@ Grasp::plan(const RobotModel& robot_model,
                                                   planning_interface.group(),
                                                   limits,
                                                   attached_collision_object,
+                                                  m_goal->grasp_action,
                                                   context.planning_scene,
                                                   planner,
                                                   *context.plan_visualizer,
