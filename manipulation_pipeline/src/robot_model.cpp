@@ -302,7 +302,7 @@ RobotModel::RobotModel(const moveit::core::RobotModel& model,
     }
 
     const auto group_log = m_log.get_child(group->getName());
-    if (group->isChain())
+    if (group->getConfig().chains_.size() == 1)
     {
       const auto interface =
         std::make_shared<GroupInterface>(GroupInterface::createChain(group, moveit_cpp, group_log));
